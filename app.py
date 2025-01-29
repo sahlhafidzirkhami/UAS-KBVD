@@ -26,6 +26,12 @@ app.layout = html.Div([
                 dcc.Graph(id='map-distribution'),
             ])
         ]),
+        
+        dcc.Tab(label='Persentase Perbandingan Sekolah Negeri dan Swasta', children=[
+            html.Div([
+                dcc.Graph(id='pie-chart-school')
+            ])
+        ]),
     ])
 ])
 
@@ -81,6 +87,19 @@ def update_map(_):
     fig.update_layout(legend_title='Jenjang Pendidikan')
     return fig
 
+# Callback untuk pie chart
+@app.callback(
+    Output('pie-chart-school', 'figure'),
+    Input('pie-chart-school', 'id')
+)
+def update_pie_chart(_):
+    data['status'] = data['status'].replace({'N': 'Negeri', 'S': 'Swasta'})
+    fig = px.pie(
+        data,
+        names='status',
+        title="Persentase Perbandingan Sekolah Negeri dan Swasta"
+    )
+    return fig
 
 # Run app
 if __name__ == '__main__':
