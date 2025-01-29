@@ -37,11 +37,16 @@ app.layout = html.Div([
             html.Div([
             dcc.Graph(id='top-10-cities')
         ]),
+    ]),
+
+        dcc.Tab(label='Perbandingan Jenjang Pendidikan', children=[
+            html.Div([
+                dcc.Graph(id='education-level-comparison')
+            ])
+        ])
+
     ])
 ])
-
-    ])
-
 
 # Callback untuk visualisasi bar chart
 @app.callback(
@@ -136,6 +141,34 @@ def update_top_cities(_):
     
     fig.update_layout(yaxis={'categoryorder': 'total ascending'})
     
+    return fig
+
+# Callback untuk perbandingan jenjang pendidikan
+@app.callback(
+    Output('education-level-comparison', 'figure'),
+    Input('education-level-comparison', 'id')  # Dummy input
+)
+def update_education_level_comparison(_):
+    # Hitung jumlah sekolah berdasarkan jenjang pendidikan
+    education_comparison = (
+        data.groupby('stage')
+        .size()
+        .reset_index(name='Jumlah')
+        .sort_values(by='Jumlah', ascending=False)
+    )
+
+    # Buat bar chart horizontal
+    fig = px.bar(
+        education_comparison,
+        x='Jumlah',
+        y='stage',
+        orientation='h',
+        title="Perbandingan Jumlah Sekolah Berdasarkan Jenjang Pendidikan",
+        labels={'Jumlah': 'Jumlah Sekolah', 'stage': 'Jenjang Pendidikan'},
+        text_auto=True
+    )
+
+    fig.update_layout(yaxis={'categoryorder': 'total ascending'})
     return fig
 
 # Run app
