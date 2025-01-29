@@ -32,8 +32,15 @@ app.layout = html.Div([
                 dcc.Graph(id='pie-chart-school')
             ])
         ]),
+        
+        dcc.Tab(label='Top 10 Kota/Kabupaten', children=[
+            html.Div([
+            dcc.Graph(id='top-10-cities')
+        ]),
     ])
 ])
+
+    ])
 
 
 # Callback untuk visualisasi bar chart
@@ -99,6 +106,36 @@ def update_pie_chart(_):
         names='status',
         title="Persentase Perbandingan Sekolah Negeri dan Swasta"
     )
+    return fig
+
+# Callback untuk visualisasi top 10 kota/kabupaten dengan jumlah sekolah terbanyak
+@app.callback(
+    Output('top-10-cities', 'figure'),
+    Input('top-10-cities', 'id')  # Dummy input
+)
+def update_top_cities(_):
+    # Hitung jumlah sekolah per kota/kabupaten
+    schools_per_city = (
+        data.groupby('city_name')
+        .size()
+        .reset_index(name='Jumlah')
+        .sort_values(by='Jumlah', ascending=False)
+        .head(10)  # Ambil 10 kota/kabupaten dengan jumlah sekolah terbanyak
+    )
+    
+    # Buat horizontal bar chart
+    fig = px.bar(
+        schools_per_city,
+        x='Jumlah',
+        y='city_name',
+        orientation='h',
+        title='Top 10 Kota/Kabupaten dengan Jumlah Sekolah Terbanyak',
+        labels={'Jumlah': 'Jumlah Sekolah', 'city_name': 'Kota/Kabupaten'},
+        text_auto=True
+    )
+    
+    fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+    
     return fig
 
 # Run app
