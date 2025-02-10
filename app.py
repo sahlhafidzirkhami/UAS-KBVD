@@ -5,170 +5,105 @@ import pandas as pd
 import plotly.express as px
 
 # Load data
-data = pd.read_csv('data.csv')  # Ganti dengan path file Anda jika berbeda
+data = pd.read_csv('data_pengangguran.csv') 
+
+# Convert "Periode" to string for consistency
+data['Periode'] = data['Periode'].astype(str)
 
 # Layout Dash app
 app = dash.Dash(__name__)
-app.title = "School Data Visualization"
+app.title = "Visualisasi Data Pengangguran"
 
 app.layout = html.Div([
-    html.H1("School Data Visualization", style={'textAlign': 'center'}),
-
-    dcc.Tabs([
-        dcc.Tab(label='Jumlah Sekolah per Provinsi', children=[
-            html.Div([
-                dcc.Graph(id='bar-chart-province'),
-            ])
-        ]),
-
-        dcc.Tab(label='Sebaran Sekolah di Peta', children=[
-            html.Div([
-                dcc.Graph(id='map-distribution'),
-            ])
-        ]),
-        
-        dcc.Tab(label='Persentase Perbandingan Sekolah Negeri dan Swasta', children=[
-            html.Div([
-                dcc.Graph(id='pie-chart-school')
-            ])
-        ]),
-        
-        dcc.Tab(label='Top 10 Kota/Kabupaten', children=[
-            html.Div([
-            dcc.Graph(id='top-10-cities')
-        ]),
-    ]),
-
-        dcc.Tab(label='Perbandingan Jenjang Pendidikan', children=[
-            html.Div([
-                dcc.Graph(id='education-level-comparison')
-            ])
-        ])
-
-    ])
+    html.H1("Visualisasi Data Pengangguran", style={'textAlign': 'center'}),
+    
+    html.Div([
+        dcc.Graph(id='bar-chart-pengangguran', style={'height': '60vh', 'width': '50%'}),
+        dcc.Graph(id='pie-chart-pendidikan', style={'height': '60vh', 'width': '50%'})
+    ], style={'display': 'flex'}),
+    
+    dcc.Graph(id='line-chart-trend', style={'height': '60vh'}),
+    dcc.Graph(id='stacked-bar-chart', style={'height': '60vh'}),
 ])
 
-# Callback untuk visualisasi bar chart
+# Bar chart: Perbandingan pengangguran berdasarkan tingkat pendidikan
 @app.callback(
-    Output('bar-chart-province', 'figure'),
-    Input('bar-chart-province', 'id')  # Dummy input
+    Output('bar-chart-pengangguran', 'figure'),
+    Input('bar-chart-pengangguran', 'id')
 )
 def update_bar_chart(_):
-    # Hitung jumlah sekolah per provinsi berdasarkan jenjang
-    schools_per_province = (
-        data.groupby(['province_name', 'stage'])
-        .size()
-        .reset_index(name='Jumlah')
-    )
-
-    # Buat stacked bar chart
+    pendidikan_columns = data.columns[2:-1]  # Ambil kolom pendidikan saja
+    pendidikan_counts = data[pendidikan_columns].sum().reset_index()
+    pendidikan_counts.columns = ['Tingkat Pendidikan', 'Jumlah']
+    
     fig = px.bar(
-        schools_per_province,
-        x='province_name',
+        pendidikan_counts,
+        x='Tingkat Pendidikan',
         y='Jumlah',
-        color='stage',
-        title="Jumlah Sekolah di Setiap Provinsi Berdasarkan Jenjang",
-        labels={'Jumlah': 'Jumlah Sekolah', 'province_name': 'Provinsi', 'stage': 'Jenjang Pendidikan'},
-        barmode='stack'
+        title="Jumlah Pengangguran Berdasarkan Tingkat Pendidikan",
+        labels={'Jumlah': 'Jumlah Pengangguran', 'Tingkat Pendidikan': 'Tingkat Pendidikan'},
+        text_auto=True
     )
-    fig.update_layout(xaxis_title='Provinsi', yaxis_title='Jumlah Sekolah', legend_title='Jenjang Pendidikan')
+    
     return fig
 
-
-# Callback untuk visualisasi sebaran peta
+# Line chart: Tren pengangguran dari tahun ke tahun
 @app.callback(
-    Output('map-distribution', 'figure'),
-    Input('map-distribution', 'id')  # Dummy input
+    Output('line-chart-trend', 'figure'),
+    Input('line-chart-trend', 'id')
 )
-def update_map(_):
-    # Filter data dengan kolom latitude dan longitude
-    map_data = data[['school_name', 'stage', 'status', 'lat', 'long']].dropna()
-
-    # Buat scatter map
-    fig = px.scatter_mapbox(
-        map_data,
-        lat='lat',
-        lon='long',
-        color='stage',
-        hover_name='school_name',
-        hover_data={'lat': False, 'long': False, 'status': True},
-        title="Sebaran Sekolah Berdasarkan Jenjang Pendidikan",
-        mapbox_style='open-street-map',
-        zoom=4
+def update_line_chart(_):
+    trend_data = data.groupby('Periode')['Total'].sum().reset_index()
+    
+    fig = px.line(
+        trend_data,
+        x='Periode',
+        y='Total',
+        title="Tren Pengangguran dari Tahun ke Tahun",
+        markers=True,
+        labels={'Total': 'Total Pengangguran', 'Periode': 'Tahun'}
     )
-    fig.update_layout(legend_title='Jenjang Pendidikan')
+    
     return fig
 
-# Callback untuk pie chart
+# Pie chart: Proporsi pengangguran berdasarkan tingkat pendidikan
 @app.callback(
-    Output('pie-chart-school', 'figure'),
-    Input('pie-chart-school', 'id')
+    Output('pie-chart-pendidikan', 'figure'),
+    Input('pie-chart-pendidikan', 'id')
 )
 def update_pie_chart(_):
-    data['status'] = data['status'].replace({'N': 'Negeri', 'S': 'Swasta'})
+    pendidikan_columns = data.columns[2:-1]
+    pendidikan_counts = data[pendidikan_columns].sum().reset_index()
+    pendidikan_counts.columns = ['Tingkat Pendidikan', 'Jumlah']
+    
     fig = px.pie(
-        data,
-        names='status',
-        title="Persentase Perbandingan Sekolah Negeri dan Swasta"
+        pendidikan_counts,
+        names='Tingkat Pendidikan',
+        values='Jumlah',
+        title="Proporsi Pengangguran Berdasarkan Tingkat Pendidikan"
     )
-    return fig
-
-# Callback untuk visualisasi top 10 kota/kabupaten dengan jumlah sekolah terbanyak
-@app.callback(
-    Output('top-10-cities', 'figure'),
-    Input('top-10-cities', 'id')  # Dummy input
-)
-def update_top_cities(_):
-    # Hitung jumlah sekolah per kota/kabupaten
-    schools_per_city = (
-        data.groupby('city_name')
-        .size()
-        .reset_index(name='Jumlah')
-        .sort_values(by='Jumlah', ascending=False)
-        .head(10)  # Ambil 10 kota/kabupaten dengan jumlah sekolah terbanyak
-    )
-    
-    # Buat horizontal bar chart
-    fig = px.bar(
-        schools_per_city,
-        x='Jumlah',
-        y='city_name',
-        orientation='h',
-        title='Top 10 Kota/Kabupaten dengan Jumlah Sekolah Terbanyak',
-        labels={'Jumlah': 'Jumlah Sekolah', 'city_name': 'Kota/Kabupaten'},
-        text_auto=True
-    )
-    
-    fig.update_layout(yaxis={'categoryorder': 'total ascending'})
     
     return fig
 
-# Callback untuk perbandingan jenjang pendidikan
+# Stacked bar chart: Perbandingan tingkat pendidikan setiap tahun
 @app.callback(
-    Output('education-level-comparison', 'figure'),
-    Input('education-level-comparison', 'id')  # Dummy input
+    Output('stacked-bar-chart', 'figure'),
+    Input('stacked-bar-chart', 'id')
 )
-def update_education_level_comparison(_):
-    # Hitung jumlah sekolah berdasarkan jenjang pendidikan
-    education_comparison = (
-        data.groupby('stage')
-        .size()
-        .reset_index(name='Jumlah')
-        .sort_values(by='Jumlah', ascending=False)
-    )
-
-    # Buat bar chart horizontal
+def update_stacked_bar_chart(_):
+    pendidikan_columns = data.columns[2:-1]
+    stacked_data = data.melt(id_vars=['Periode'], value_vars=pendidikan_columns, var_name='Tingkat Pendidikan', value_name='Jumlah')
+    
     fig = px.bar(
-        education_comparison,
-        x='Jumlah',
-        y='stage',
-        orientation='h',
-        title="Perbandingan Jumlah Sekolah Berdasarkan Jenjang Pendidikan",
-        labels={'Jumlah': 'Jumlah Sekolah', 'stage': 'Jenjang Pendidikan'},
-        text_auto=True
+        stacked_data,
+        x='Periode',
+        y='Jumlah',
+        color='Tingkat Pendidikan',
+        title="Perbandingan Tingkat Pendidikan Setiap Tahun",
+        labels={'Jumlah': 'Jumlah Pengangguran', 'Periode': 'Tahun'},
+        barmode='stack'
     )
-
-    fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+    
     return fig
 
 # Run app
